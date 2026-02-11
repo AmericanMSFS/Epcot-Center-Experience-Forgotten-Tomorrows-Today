@@ -2,6 +2,7 @@ const launchButton = document.getElementById("button");
 const text = document.getElementById("text");
 
 let watchId = null;
+let zones = [];
 
 function startExperience() {
     if (!navigator.geolocation) {
