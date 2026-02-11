@@ -2,6 +2,7 @@ const launchButton = document.getElementById('button');
 const text = document.getElementById('text');
 
 function getLocation() {
+    text.innerHTML = "Launching experience...";
     if (navigator.geolocation) {
         navigator.geolocation.watchPosition(success, error);
     } else {
