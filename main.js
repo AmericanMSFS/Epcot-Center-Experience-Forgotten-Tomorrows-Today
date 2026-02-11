@@ -2,50 +2,74 @@ const launchButton = document.getElementById("button");
 const text = document.getElementById("text");
 
 let watchId = null;
-let zones = [];
+let zones = [
+    {
+        name: "Test Zone",
+        polygon: [
+            [-76.14465994414513, 36.520068852447494],
+            [-76.14465994414513, 36.51504213727992],
+            [-76.13625251076678, 36.51504213727992],
+            [-76.13625251076678, 36.520068852447494],
+            [-76.14465994414513, 36.520068852447494]
+        ]
+    },
+];
+let currentZone = null;
 
-function startExperience() {
+function findZone(lat, lon) {
+    for (const zone of zones) {
+        if (isPointInPolygon(lat, lon, zone.polygon)) {
+            return zone;
+        }
+    }
+    return null;
+}
+
+function pointInZoneCalc(lat,lon,polygon) {
+    let inside = false;
+    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        const xi = polygon[i][1], yi = polygon[i][0];
+        const xj = polygon[j][1], yj = polygon[j][0];
+
+        const intersect =
+            ((xi > lat) != (xj > lat)) &&
+            (lon < ((yj - yi) * (lat - xi)) / (xj - xi) + yi);
+
+        if (intersect) inside = !inside;
+    }
+    return inside;
+}
+
+button.addEventListener("click", () => {
     if (!navigator.geolocation) {
-        text.textContent = "Geolocation is not supported by this browser.";
+        text.textContent = "Geolocation not supported.";
         return;
     }
 
     text.textContent = "Locating you...";
 
-    watchId = navigator.geolocation.watchPosition(
-        onSuccess,
-        onError,
+    navigator.geolocation.watchPosition(
+        position => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+
+            const zone = findZone(lat, lon);
+
+            if (zone && (!currentZone || zone.name !== currentZone.name)) {
+                currentZone = zone;
+                text.innerHTML = `You are in <strong>${zone.name}</strong>`;
+            }
+
+            if (!zone && currentZone !== null) {
+                currentZone = null;
+                text.textContent = "You are not in a defined zone.";
+            }
+        },
+        error => {
+            text.textContent = "Location access denied or unavailable.";
+        },
         {
-            enableHighAccuracy: true,
-            maximumAge: 0,
-            timeout: 10000
+            enableHighAccuracy: true
         }
     );
-}
-
-function onSuccess(position) {
-    const lat = position.coords.latitude.toFixed(6);
-    const lon = position.coords.longitude.toFixed(6);
-
-    text.innerHTML =
-        `Latitude: ${lat}<br>` +
-        `Longitude: ${lon}`;
-}
-
-function onError(error) {
-    switch (error.code) {
-        case error.PERMISSION_DENIED:
-            text.textContent = "Location access denied.";
-            break;
-        case error.POSITION_UNAVAILABLE:
-            text.textContent = "Location information unavailable.";
-            break;
-        case error.TIMEOUT:
-            text.textContent = "Location request timed out.";
-            break;
-        default:
-            text.textContent = "An unknown error occurred.";
-    }
-}
-
-launchButton.addEventListener("click", startExperience);
+});
